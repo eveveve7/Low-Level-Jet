@@ -1,0 +1,276 @@
+
+%VIENTO ZONAL
+data=ncinfo("data_0.nc");
+u = ncread('data_0.nc', 'u'); %viento zonal
+u=squeeze(u);
+lat=ncread('data_0.nc','latitude');
+lon=ncread('data_0.nc','longitude');
+date=ncread('data_0.nc','date');
+
+
+%% 1. OBTENER SERIES DE LOS WESTERLIES EN TÉRMINOS DE INTENSIDAD Y LATITUD
+%caracterizar westerlies, latitudes medias cercanas a chile 
+%definir nucleo de westerlies 
+
+% latitudes  30°S a 60°S
+lat_range = lat >= -60 & lat <= -30;
+
+
+u_wind_south = u(:, lat_range,:);  
+
+clear u 
+for x=1:1440
+    viento=squeeze(u_wind_south(x,:,:)); %longitud x longitud
+    [max_int(:,x), ind_max(:,x)]=max(viento); 
+end
+
+%agregar promedio anual en total 10 graficos
+
+intensidad=mean(max_int,2);
+
+posicion=lat(ind_max);
+
+pos=mean(posicion,2);
+
+plot(pos)
+
+intensidad=mean(viento,2,'omitnan');
+
+% Separar año, mes y día
+anio = floor(date / 10000);            
+mes = floor(mod(date, 10000) / 100);  
+dia = mod(date, 100);                 
+
+% Crear la matriz separada
+matriz_fechas = [anio, mes, dia];
+
+%para graficar despuess
+fechas= datetime(date, 'ConvertFrom', 'yyyyMMdd');
+
+
+% //////////////////////////////////////////////////////////////////
+% DICIEMBRE- ENERO - FEBRERO
+def = matriz_fechas(:, 2) == 12 | matriz_fechas(:, 2) == 1 | matriz_fechas(:, 2) == 2;
+meses_def = fechas(def, :);
+%westerlies_verano= intensidad(:,:,def);
+westerlies_verano=squeeze(westerlies_verano);
+latitud_oeste= lat(lat_range);
+
+% tiempo vs intensidad verano 
+subplot(2,2,1)
+plot(meses_def,westerlies_verano,'b','LineWidth',1.5)
+hold on
+grid on
+title('DICIEMBRE- ENERO- FEBRERO','LineWidth',15)
+xlabel('Tiempo (años)')
+ylabel('Intensidad del viento (m/s)')
+ylim([1 14]);
+
+%MARZO - ABRIL - MAYO
+mam = matriz_fechas(:, 2) == 3 | matriz_fechas(:, 2) == 4 | matriz_fechas(:, 2) == 5;
+meses_mam = fechas(mam, :);
+westerlies_mam= intensidad(:,mam);
+
+
+% tiempo vs intensidad 
+subplot(2,2,2)
+hold on
+plot(meses_mam,westerlies_mam,'b','LineWidth',1.5)
+grid on
+title('MARZO-ABRIL-MAYO','LineWidth',15)
+xlabel('Tiempo (años)')
+ylabel('Intensidad del viento (m/s)')
+ylim([1 14]);
+
+
+% JUNIO - JULIO - AGOSTO
+jja=matriz_fechas(:, 2) == 6 | matriz_fechas(:, 2) == 7 | matriz_fechas(:, 2) == 8;
+meses_jja=fechas(jja,:);
+westerlies_jja= intensidad(:,jja);
+
+% tiempo vs intensidad 
+subplot(2,2,3)
+hold on
+plot(meses_jja,westerlies_jja,'b','LineWidth',1.5)
+grid on
+title('JUNIO-JULIO-AGOSTO','LineWidth',15)
+xlabel('Tiempo (años)')
+ylabel('Intensidad del viento (m/s)')
+ylim([1 14]);
+
+
+
+% SEPTIEMBRE - OCTUBRE- NOVIEMBRE
+son=matriz_fechas(:, 2) == 9 | matriz_fechas(:, 2) == 10 | matriz_fechas(:, 2) == 11;
+meses_son=fechas(son,:);
+westerlies_son= intensidad(:,son);
+
+% tiempo vs intensidad  
+subplot(2,2,4)
+plot(meses_son,westerlies_son,'b','LineWidth',1.5)
+hold on
+grid on
+title('SEPTIEMBRE-OCTUBRE-NOVIEMBRE','LineWidth',15)
+xlabel('Tiempo (años)')
+ylabel('Intensidad del viento (m/s)')
+ylim([1 14]);
+
+
+%% 2. ANALIZAR SUS CORRELACIONES CON VARIABLES AMBIENTALES
+% como temperatura máxima, temperatura mínima, precipitación y NDVI
+% 
+% inlat= lat>=-56.9750 & lat<=-17.0250;
+% lat_fn=lat(inlat);
+% 
+% inlon= lon>=-76.9750 & lon<=-66.0250;
+% lon_fn=lon(inlon);
+%PRECIPITACION:
+pr_info=ncinfo('CR2MET_pr_v2.0_mon_1979_2019_005deg.nc');
+pr=ncread('CR2MET_pr_v2.0_mon_1979_2019_005deg.nc','pr');
+pr_lon=ncread('CR2MET_pr_v2.0_mon_1979_2019_005deg.nc','lon');
+pr_lat=ncread('CR2MET_pr_v2.0_mon_1979_2019_005deg.nc','lat');
+pr_time=ncread('CR2MET_pr_v2.0_mon_1979_2019_005deg.nc','time');
+
+
+
+%opcion 1
+viento0=mean(viento,2,'omitnan');
+viento1=viento0(469:960);
+viento1=squeeze(viento1);
+
+
+%CORRELACION CON PRECIPITACIÓN
+corr_pr=corr3(pr,viento1);
+
+%121
+
+figure()
+m_proj('miller','lon',[-80 -60],'lat',[-60 -15]);
+m_pcolor(pr_lon,pr_lat,corr_pr'); 
+shading interp
+a=colorbar(gca,'Location','EastOutside');
+a.Label.String = 'Correlación';
+clim([-1,1])
+hold on
+m_grid('LineStyle','--','Box','fancy','tickdir','in','FontSize',9);
+m_gshhs_i('Color','k','LineWidth',2);
+title('Westerlies & Precipitación','FontSize',20)
+xlabel('Longitud');
+ylabel('Latitud');
+colormap(gcf,cmocean('balance'))
+hold off
+
+clear pr_lat pr_lon pr 
+
+
+
+%latit= lat >= -lat_range = lat >= -60 & lat <= -30;
+
+
+
+%TEMPERATURA MAXIMA:
+
+tmax_info=ncinfo('CR2MET_tmax_v2.0_mon_1979_2019_005deg.nc');
+tmax=ncread('CR2MET_tmax_v2.0_mon_1979_2019_005deg.nc','tmax');
+lat_tmax=ncread('CR2MET_tmax_v2.0_mon_1979_2019_005deg.nc','lat');
+lon_tmax=ncread('CR2MET_tmax_v2.0_mon_1979_2019_005deg.nc','lon');
+corr_temp_max= corr3(tmax,viento1);
+
+figure()
+m_proj('miller','lon',[-80 -60],'lat',[-60 -15]);
+m_pcolor(lon_tmax,lat_tmax,corr_temp_max'); 
+shading interp
+a=colorbar(gca,'Location','EastOutside');
+a.Label.String = 'Correlación';
+clim([-1,1])
+hold on
+m_grid('LineStyle','--','Box','fancy','tickdir','in','FontSize',9);
+m_gshhs_i('Color','k','LineWidth',2);
+title('Westerlies & Temperatura máxima','FontSize',20)
+xlabel('Longitud');
+ylabel('Latitud');
+colormap(gcf,cmocean('balance'))
+hold off
+
+
+%TEMPERATURA MINIMA:
+tmin_info=ncinfo('CR2MET_tmin_v2.0_mon_1979_2019_005deg.nc');
+tmin=ncread('CR2MET_tmin_v2.0_mon_1979_2019_005deg.nc','tmin');
+lat_min=ncread('CR2MET_tmin_v2.0_mon_1979_2019_005deg.nc','lat');
+lon_min=ncread('CR2MET_tmin_v2.0_mon_1979_2019_005deg.nc','lon');
+corr_temp_min= corr3(tmin,viento1);
+
+figure()
+m_proj('miller','lon',[-80 -60],'lat',[-60 -15]);
+m_pcolor(lon_min,lat_min,corr_temp_min'); 
+shading interp
+a=colorbar(gca,'Location','EastOutside');
+a.Label.String = 'Correlación';
+clim([-1,1])
+hold on
+m_grid('LineStyle','--','Box','fancy','tickdir','in','FontSize',9);
+m_gshhs_i('Color','k','LineWidth',2);
+title('Westerlies & Temperatura minima','FontSize',20)
+xlabel('Longitud');
+ylabel('Latitud');
+colormap(gcf,cmocean('balance'))
+hold off
+
+
+%Indice de área foliar, vegetación alta
+
+veget_info=ncinfo('vegt.nc'); %1950 a 2023
+valid_time=ncread('veget.nc','valid_time');
+lat_veg=ncread('vegt.nc','latitude');
+lon_veg=ncread('vegt.nc','longitude');
+veget=ncread('vegt.nc','lai_hv');
+
+veget=ncread("vegt.nc",'lai_hv');
+veget=veget(:,:,1:888);
+
+viento2=viento0(121:end);
+viento2=squeeze(viento2);
+
+
+corr_veg=corr3(veget,viento2);
+
+figure()
+m_proj('miller','lon',[-80 -60],'lat',[-60 -15]);
+m_pcolor(lon_veg,lat_veg,corr_veg'); 
+shading interp
+a=colorbar(gca,'Location','EastOutside');
+a.Label.String = 'Correlación';
+clim([-1,1])
+hold on
+m_grid('LineStyle','--','Box','fancy','tickdir','in','FontSize',9);
+m_gshhs_i('Color','k','LineWidth',2);
+title('Westerlies & Vegetación','FontSize',20)
+xlabel('Longitud');
+ylabel('Latitud');
+colormap(gcf,cmocean('balance'))
+hold off
+
+
+
+
+
+%/////////////////////////anexo
+
+figure()
+m_proj('miller','lon',[-180 60],'lat',[-60 -16]);
+m_pcolor(1,u_wind_south(1,:,1), westerlies'); 
+shading interp
+a=colorbar(gca,'Location','EastOutside');
+a.Label.String = ' '; 
+hold on
+m_grid('LineStyle','--','Box','fancy','tickdir','in','FontSize',9);
+m_gshhs_i('Color','k','LineWidth',2);
+title('Intensidad','FontSize',20)
+xlabel('Longitud');
+ylabel('Latitud');
+colormap(gcf,cmocean('balance'));
+hold off
+
+
+
+
